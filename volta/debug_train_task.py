@@ -27,16 +27,14 @@ from volta.optimization import RAdam
 from volta.encoders import BertForVLTasks, M3PForVLTasks
 from volta.train_utils import freeze_layers, tbLogger, summary_parameters, save, resume
 from volta.task_utils import LoadDataset, LoadLoss, ForwardModelsTrain, ForwardModelsVal
-from volta.utils import set_logging_format
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-#logging.basicConfig(
-#    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-#    datefmt="%m/%d/%Y %H:%M:%S",
-#    level=logging.INFO,
-#)
-
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+    datefmt="%m/%d/%Y %H:%M:%S",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
 
 
@@ -151,9 +149,6 @@ def main():
             default_gpu = True
     else:
         default_gpu = True
-
-    print(os.path.join(args.output_dir, "training.log"))
-    set_logging_format(os.path.join(args.output_dir, "training.log"))
     logger.info(f"device: {device} n_gpu: {n_gpu}, distributed training: {bool(args.local_rank != -1)}")
 
     # Load config
@@ -188,7 +183,6 @@ def main():
             print(args, file=f)  # Python 3.x
             print("\n", file=f)
             print(config, file=f)
-        logger.info(args)
 
     # Seed
     random.seed(args.seed)
@@ -249,7 +243,7 @@ def main():
             if not any(nd in key for nd in no_decay):
                 optimizer_grouped_parameters += [{"params": [value], "lr": lr, "weight_decay": args.weight_decay}]
     if default_gpu:
-        logger.info(len(list(model.named_parameters())), len(optimizer_grouped_parameters))
+        print(len(list(model.named_parameters())), len(optimizer_grouped_parameters))
     if args.optim == "AdamW":
         optimizer = AdamW(optimizer_grouped_parameters,
                           lr=base_lr,
@@ -293,10 +287,10 @@ def main():
     # Print summary
     if default_gpu:
         summary_parameters(model, logger)
-        logger.info("***** Running training *****")
-        logger.info("  Num Iters: ", task2num_iters[task])
-        logger.info("  Batch size: ", batch_size)
-        logger.info("  Num steps: %d" % num_train_optim_steps)
+        print("***** Running training *****")
+        print("  Num Iters: ", task2num_iters[task])
+        print("  Batch size: ", batch_size)
+        print("  Num steps: %d" % num_train_optim_steps)
 
     # Train
     scores = 0
@@ -354,7 +348,7 @@ def main():
             save(save_path, logger, epoch_id, model, optimizer, scheduler, global_step, tb_logger, default_gpu, max_score)
 
     tb_logger.txt_close()
-    logger.info("Best Validation score: %.3f " % (max_score * 100.0))
+    print("Best Validation score: %.3f " % (max_score * 100.0))
 
 
 def evaluate(config, dataloader_val, task_cfg, device, task_id, model, criterion, epoch_id, default_gpu, tb_logger, num_batches=-1):
@@ -365,8 +359,8 @@ def evaluate(config, dataloader_val, task_cfg, device, task_id, model, criterion
         loss, score, batch_size = ForwardModelsVal(config, task_cfg, device, task_id, batch, model, criterion)
         tb_logger.step_val(epoch_id, float(loss), float(score), task_id, batch_size, "val")
         if default_gpu:
-            logger.info("%d/%d\r" % (i, len(dataloader_val)))
-
+            sys.stdout.write("%d/%d\r" % (i, len(dataloader_val)))
+            sys.stdout.flush()
     score = tb_logger.showLossVal(task_id)
     model.train()
     return score

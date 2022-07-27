@@ -35,6 +35,27 @@ TF_WEIGHTS_NAME = 'model.ckpt'
 logger = logging.getLogger(__name__)
 
 
+def make_sure_parent_dir_exists(filepath):
+    parent_dir = os.path.dirname(filepath)
+    os.makedirs(parent_dir, exist_ok=True)
+
+
+def set_logging_format(log_filepath=None, debug=False):
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    handlers = [logging.StreamHandler(sys.stdout)]
+    if log_filepath is not None:
+        make_sure_parent_dir_exists(log_filepath)
+        handlers.append(logging.FileHandler(filename=log_filepath))
+
+    if debug:
+        logging.basicConfig(format="%(asctime)s - %(name)s - %(message)s", datefmt="%m/%d/%Y %H:%M:%S",
+                            level=logging.DEBUG, handlers=handlers)
+    else:
+        logging.basicConfig(format="%(asctime)s - %(name)s - %(message)s", datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO, handlers=handlers)
+    print(handlers)
+
+
 def url_to_filename(url, etag=None):
     """
     Convert `url` into a hashed filename in a repeatable way.
